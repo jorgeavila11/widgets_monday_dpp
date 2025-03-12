@@ -1,0 +1,120 @@
+.container {
+  width: 100vw;  /* Ocupa a largura total da tela */
+  height: 100vh; /* Ocupa a altura total da tela */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;  
+}
+
+.chart-container {
+  width: 80%;
+  max-width: 1000px; /* Define um tamanho máximo para evitar distorções */
+  height: 500px; /* Aumenta a altura do gráfico */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 50px;
+}
+
+.cabecalho {
+  text-align: center;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.board-dropdown-container {
+  display: flex;
+  flex-direction: line;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  width: 100%;
+}
+
+.board-dropdown {
+  width: 200px;
+  margin: 10px;
+}
+
+.radio-buttons-container {
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.menu-container {
+  position: relative;
+}
+
+.menu-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  font-size: 20px;
+}
+
+.menu-content {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  background: white;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  border-radius: 8px;
+  z-index: 10;
+  width: 300px;
+}
+
+.container {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+}
+
+/* Contêiner do menu no canto direito */
+.menu-container {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+/* Botão do menu */
+.menu-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  font-size: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Menu flutuante alinhado à direita */
+.menu-content {
+  position: absolute;
+  top: 40px;
+  right: 0;
+  transform: translateX(-285px);
+  /* Move o menu um pouco mais para a esquerda */
+  background: white;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  border-radius: 8px;
+  z-index: 10;
+  width: 300px;
+  text-align: left;
+  /* Ajusta o alinhamento do texto */
+}
+
+.legend {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  width: 100%;
+  gap: 10px;
+}
