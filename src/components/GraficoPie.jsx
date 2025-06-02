@@ -2,27 +2,31 @@ import React, { useEffect, useState } from "react";
 import mondaySdk from "monday-sdk-js";
 import ReactECharts from "echarts-for-react";
 import "./graficoGauge.css";
-import { AttentionBox} from "monday-ui-react-core";
+import { AttentionBox, Dropdown } from "monday-ui-react-core";
 import "monday-ui-react-core/tokens";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBars, faTimes, faCog, faRefresh, faInfoCircle, faCalendarAlt } from '@fortawesome/free-solid-svg-icons';
 
 const monday = mondaySdk();
 
-const graficoPie = () => {
+const GraficoPie = () => {
   const [boardId, setBoardId] = useState(null);
   const [data, setData] = useState([]); 
   const [columnId, setColumnId] = useState(null);
   const [timeFilter, setTimeFilter] = useState("ALL");
   const [boards, setBoards] = useState([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [timelineColumns, setTimelineColumns] = useState([]);
+  const [selectedColumn, setSelectedColumn] = useState(null);
 
   useEffect(() => {
-    // Tenta recuperar o boardId do armazenamento interno do Monday.com
     const fetchBoardId = async () => {
       const res = await monday.storage.getItem("selectedBoardId");
       if (res?.data?.value) {
         setBoardId(res.data.value);
       }
 
-      // Captura mudanças no contexto do Monday.com
       monday.listen("context", (res) => {
         if (res?.data?.boardId) {
           setBoardId(res.data.boardId);
@@ -37,15 +41,33 @@ const graficoPie = () => {
 
   useEffect(() => {
     if (boardId) {
-      fetchTimelineColumnId();
+      fetchTimelineColumns();
     }
   }, [boardId]);
+
+  useEffect(() => {
+    if (selectedColumn) {
+      setColumnId(selectedColumn.id);
+    }
+  }, [selectedColumn]);
 
   useEffect(() => {
     if (columnId) {
       fetchData(columnId);
     }
   }, [columnId, timeFilter]);
+
+  const toggleMenu = () => {
+    setMenuOpen(!menuOpen);
+  };
+
+  const handleRefresh = () => {
+    setMenuOpen(false);
+    if (columnId) {
+      setLoading(true);
+      fetchData(columnId).finally(() => setLoading(false));
+    }
+  };
 
   const fetchBoards = async () => {
     const query = `query { boards { id name } }`;
@@ -59,18 +81,31 @@ const graficoPie = () => {
     }
   };
 
-  const fetchTimelineColumnId = async () => {
-    const query = `query { boards(ids: [${boardId}]) { items_page { items { column_values { id type } } } } }`;
+  const fetchTimelineColumns = async () => {
+    const query = `query {
+      boards(ids: [${boardId}]) {
+        columns {
+          id
+          title
+          type
+        }
+      }
+    }`;
+    
     try {
       const res = await monday.api(query);
-      const timelineColumn = res?.data?.boards[0]?.items_page?.items[0]?.column_values.find(col => col.type === "timeline");
-      if (timelineColumn) {
-        setColumnId(timelineColumn.id);
-      } else {
-        setColumnId(null);
+      const columns = res?.data?.boards[0]?.columns || [];
+      const timelineCols = columns.filter(col => col.type === "timeline");
+      
+      setTimelineColumns(timelineCols);
+      
+      // Seleciona a primeira coluna timeline por padrão
+      if (timelineCols.length > 0 && !selectedColumn) {
+        setSelectedColumn(timelineCols[0]);
+        setColumnId(timelineCols[0].id);
       }
     } catch (error) {
-      console.error("Erro ao buscar ID da coluna timeline:", error);
+      console.error("Erro ao buscar colunas timeline:", error);
     }
   };
 
@@ -90,8 +125,8 @@ const graficoPie = () => {
       const percentageOnTime = total > 0 ? ((onTimeCount / total) * 100).toFixed(0) : 0;
 
       setData([
-        { value: percentageOnTime, name:  " Dentro do Prazo", itemStyle: { color: "#00c04b" } },
-        { value: percentageOverdue, name:  " Fora do Prazo", itemStyle: { color: "#FF2900" } }
+        { value: percentageOnTime, name: "Dentro do Prazo", itemStyle: { color: "#00c04b" } },
+        { value: percentageOverdue, name: "Fora do Prazo", itemStyle: { color: "#FF2900" } }
       ]);
     } catch (error) {
       console.error("Erro ao buscar dados da coluna timeline:", error);
@@ -105,7 +140,7 @@ const graficoPie = () => {
     legend: {
       top: "5%",
       left: "center",
-      itemGap: 40,  // Aumenta a separação entre os itens da legenda
+      itemGap: 40,
     },
     series: [
       {
@@ -117,13 +152,13 @@ const graficoPie = () => {
         endAngle: 360,
         label: {
           show: true,
-          position: "outside",  // Garante que as labels fiquem fora das fatias
-          distance: 50,         // Aumenta a separação das labels
-          formatter: "{b} ({d}%)", // Mostra o nome e a porcentagem
+          position: "outside",
+          distance: 50,
+          formatter: "{b} ({d}%)",
         },
         labelLine: {
           show: true,
-          length: 25, // Aumenta o comprimento da linha da label
+          length: 25,
           length2: 15,
         },
         data: data
@@ -132,16 +167,104 @@ const graficoPie = () => {
   };
 
   return (
-    <div className="container">
-      <div className="menu-container">       
+    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+      {/* Menu Sanduíche */}
+      <div style={{ position: 'absolute', top: 10, right: 10, zIndex: 1000 }}>
+        <button
+          onClick={toggleMenu}
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            fontSize: '20px',
+            color: '#333',
+            padding: '8px',
+            borderRadius: '4px',
+            transition: 'background-color 0.3s',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f0f0f0'}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+        >
+          <FontAwesomeIcon icon={menuOpen ? faTimes : faBars} />
+        </button>
+
+        {menuOpen && (
+          <div style={{
+            position: 'absolute',
+            right: 0,
+            top: '100%',
+            backgroundColor: 'white',
+            border: '1px solid #ddd',
+            borderRadius: '8px',
+            boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
+            minWidth: '250px',
+            overflow: 'hidden',
+            padding: '10px'
+          }}>
+            {/* Dropdown para seleção de coluna timeline */}
+            <div style={{ marginBottom: '10px' }}>
+              <div style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                marginBottom: '5px',
+                color: '#555',
+                fontSize: '14px'
+              }}>
+                <FontAwesomeIcon icon={faCalendarAlt} />
+                <span>Coluna Timeline:</span>
+              </div>
+              <select
+                value={selectedColumn?.id || ''}
+                onChange={(e) => {
+                  const selected = timelineColumns.find(col => col.id === e.target.value);
+                  setSelectedColumn(selected);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '8px',
+                  borderRadius: '4px',
+                  border: '1px solid #ddd',
+                  fontSize: '14px'
+                }}
+              >
+                {timelineColumns.map((column) => (
+                  <option key={column.id} value={column.id}>
+                    {column.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
       </div>
-      <div className="chart-container" style={{ width: "100%", height: "400px" }}>
-        {columnId ? (
-          <ReactECharts option={option} className="pie-chart" style={{ width: "100%", height: "100%" }} />
+
+      {/* Conteúdo Principal */}
+      <div style={{ width: "100%", height: "100%", paddingTop: '40px' }}>
+        {loading ? (
+          <div style={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            height: '100%',
+            color: '#555'
+          }}>
+            Carregando...
+          </div>
+        ) : columnId ? (
+          <ReactECharts 
+            option={option} 
+            style={{ width: "100%", height: "100%" }} 
+          />
         ) : (
           <AttentionBox
             title="Informações sobre o widget"
-            text="Nenhuma coluna do tipo 'timeline' encontrada no quadro selecionado."
+            text={timelineColumns.length === 0 
+              ? "Nenhuma coluna do tipo 'timeline' encontrada no quadro selecionado." 
+              : "Selecione uma coluna timeline no menu acima."}
             type="Warning"
           />
         )}
@@ -150,4 +273,4 @@ const graficoPie = () => {
   );
 };
 
-export default graficoPie;
+export default GraficoPie;
